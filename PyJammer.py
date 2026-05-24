@@ -28,34 +28,7 @@ class PyJammer:
         'organ': 16,
         'church_organ': 20
     }
-    
-    #different bass styles, where each defines a note for each beat
-    BASS_MAJOR = {
-        'simple' : [0,0,0,0],
-        'blues' : [0,3,5,7],
-        'pop' : [0,0,0,7],
-        'ballad' : [0,None,0,7],
-        'country' : [0, None, 7, None],
-        'none' : []
-    }
-    BASS_MINOR = {
-        'simple' : [0,0,0,0],
-        'blues' : [0,3,5,7],
-        'pop' : [0,0,0,7],
-        'ballad' : [0,None,0,7],
-        'country' : [0, None, 7, None],
-        'none' : []
-    }
-    
-    INTERVAL_MINOR = [0, 3, 7]
-    INTERVAL_MAJOR = [0, 4, 7]
-    INTERVAL_MAJ7 =  [0, 4, 7, 11]
-    INTERVAL_SEVEN = -2
-    INTERVAL_SIXTH = -3
 
-    bpm = 120
-    transpose = 0
-    
     # Map characters to MIDI notes
     DRUM_MAP = {
         'K': 36, # Kick
@@ -73,11 +46,41 @@ class PyJammer:
         'bass':     ["B", "B", "B", "B"],
         'clap':     ["C", "C", "C", "C"],
         'bell':     ["O", "O", "O", "O"],
+        'snare':    ["S", "S", "S", "S"],
         'swing':    ["KH", "H", "SH", "H"], # Logic can be adjusted for swing feel
         'disco':    ["K", "SH", "K", "SH"],
-        'standard': ["BH", "KH", "BH", "KH"],
+        'standard': ["KH", "SH", "KH", "SH"],
         'none':     ["", "", "", ""]
     }
+
+    #different bass styles, where each defines a note for each beat
+    BASS_MAJOR = {
+        'simple' : [0,0,0,0],
+        'half' : [0,None,0,None],
+        'blues' : [0,3,5,7],
+        'pop' : [0,0,0,7],
+        'ballad' : [0,None,0,7],
+        'country' : [0, None, 7, None],
+        'none' : []
+    }
+    BASS_MINOR = {
+        'simple' : [0,0,0,0],
+        'half' : [0,None,0,None],
+        'blues' : [0,3,5,7],
+        'pop' : [0,0,0,7],
+        'ballad' : [0,None,0,7],
+        'country' : [0, None, 7, None],
+        'none' : []
+    }
+    
+    INTERVAL_MINOR = [0, 3, 7]
+    INTERVAL_MAJOR = [0, 4, 7]
+    INTERVAL_MAJ7 =  [0, 4, 7, 11]
+    INTERVAL_SEVEN = -2
+    INTERVAL_SIXTH = -3
+
+    bpm = 120
+    transpose = 0
 
     def __init__(self):
         pygame.midi.init()
@@ -161,28 +164,54 @@ class PyJammer:
         
         try:
             for rep in range(repetitions):
-                # Enumerate allows us to know the index of the current chord
-                for i, chord_name in enumerate(progression_list):
+                for i, segment_name in enumerate(progression_list):
 
                     self.print_progression_status(progression_list, i)
                     
-                    parsed = self._parse_chord(chord_name)
-                    is_rest = parsed is None
-                    chord_notes = []
-
-                    if not is_rest:
-                        root, intervals, bass, is_minor, is_ending = parsed
-                        chord_notes = [(5 * 12 + self.transpose + root) + i_val for i_val in intervals]
-                        if len(chord_notes) < 4:
-                            chord_notes.append(chord_notes[0] + 12)
-                        
-                        actual_bass_root = bass if bass is not None else root
-                        bass_midi_root = (3 * 12 + self.transpose + actual_bass_root)
+                    # Split the segment by commas to see if there are sub-chords
+                    # e.g., "C" -> ["C"] | "C,G" -> ["C", "G"]
+                    sub_chords = segment_name.split(',')
+                    num_sub_chords = len(sub_chords)
+                    
+                    # Keep track of active notes to turn them off when chords change
+                    active_chord_notes = []
+                    last_chord_name = None
 
                     for beat in range(4):
+                        # Determine which chord belongs to the current beat
+                        # If 1 chord: index 0 for all 4 beats
+                        # If 2 chords ("C,G"): beats 0,1 get index 0 ("C"), beats 2,3 get index 1 ("G")
+                        chord_idx = int(beat / (4 / num_sub_chords))
+                        current_chord_name = sub_chords[chord_idx]
+
+                        # --- DETECT CHORD CHANGE WITHIN THE MEASURE ---
+                        if current_chord_name != last_chord_name:
+                            # Turn off the previous chord notes if any are playing
+                            for n in active_chord_notes:
+                                self.midi_out.note_off(n, 0, CHORD_CH)
+                            active_chord_notes = []
+
+                            parsed = self._parse_chord(current_chord_name)
+                            is_rest = parsed is None
+
+                            if not is_rest:
+                                root, intervals, bass, is_minor, is_ending = parsed
+                                active_chord_notes = [(5 * 12 + self.transpose + root) + i_val for i_val in intervals]
+                                if len(active_chord_notes) < 4:
+                                    active_chord_notes.append(active_chord_notes[0] + 12)
+                                
+                                actual_bass_root = bass if bass is not None else root
+                                bass_midi_root = (3 * 12 + self.transpose + actual_bass_root)
+
+                                # Trigger the new instrument chord (Block mode)
+                                if not arpeggio:
+                                    for n in active_chord_notes:
+                                        self.midi_out.note_on(n, self.Volume_Inst, CHORD_CH)
+
+                            last_chord_name = current_chord_name
+
                         # --- BASS LINE LOGIC ---
                         if not is_rest and bass_line != 'none':
-                            root, intervals, bass, is_minor, is_ending = parsed
                             if is_minor:
                                 note = self.BASS_MINOR[bass_line][beat]
                             else:
@@ -191,17 +220,13 @@ class PyJammer:
                             if note is not None:
                                 self.midi_out.note_on(bass_midi_root + note, self.Volume_Bass, BASS_CH)
 
-                            if beat==3 and is_ending:
-                                    self.midi_out.note_on(self.DRUM_MAP['Y'], 90, DRUM_CH)
+                            if beat == 3 and is_ending:
+                                self.midi_out.note_on(self.DRUM_MAP['Y'], self.Volume_Drums, DRUM_CH)
 
                         # --- CHORD / ARPEGGIO LOGIC ---
-                        if not is_rest:
-                            if arpeggio:
-                                note_to_play = chord_notes[beat % len(chord_notes)]
-                                self.midi_out.note_on(note_to_play, self.Volume_Inst, CHORD_CH)
-                            elif beat == 0:
-                                for n in chord_notes:
-                                    self.midi_out.note_on(n, self.Volume_Inst, CHORD_CH)
+                        if not is_rest and arpeggio:
+                            note_to_play = active_chord_notes[beat % len(active_chord_notes)]
+                            self.midi_out.note_on(note_to_play, self.Volume_Inst, CHORD_CH)
 
                         # --- DRUM LOGIC ---
                         if not (is_rest and silence_drums):
@@ -209,7 +234,7 @@ class PyJammer:
                         else:
                             time.sleep(beat_len)
 
-                        # --- CLEANUP ---
+                        # --- CLEANUP AT THE END OF EACH BEAT ---
                         if arpeggio and not is_rest:
                             time.sleep(0.05) 
                             self.midi_out.note_off(note_to_play, 0, CHORD_CH)
@@ -217,8 +242,9 @@ class PyJammer:
                         if not is_rest and bass_line != 'none':
                             self.midi_out.note_off(bass_midi_root, 0, BASS_CH)
 
-                    if not arpeggio and not is_rest:
-                        for n in chord_notes:
+                    # --- CLEANUP AT THE END OF THE MEASURE ---
+                    if not arpeggio:
+                        for n in active_chord_notes:
                             self.midi_out.note_off(n, 0, CHORD_CH)
                 
             self.print_progression_status([], 0)
@@ -234,7 +260,7 @@ class PyJammer:
         # Trigger notes based on characters
         for char in instructions:
             if char in self.DRUM_MAP:
-                self.midi_out.note_on(self.DRUM_MAP[char], 90, channel)
+                self.midi_out.note_on(self.DRUM_MAP[char], self.Volume_Drums, channel)
         
         time.sleep(beat_len)
 
@@ -257,7 +283,7 @@ if __name__ == "__main__":
     
     #play progression with each instrument
     prog = "Cmaj7|Am7|Fmaj7|G7."
-    for i in range(10):
+    for i in range(1):
         jammer.play_progression(prog, pattern='swing', instrument='piano', bass_line='blues', arpeggio=False)
      
     jammer.close()
