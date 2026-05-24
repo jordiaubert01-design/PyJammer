@@ -16,12 +16,6 @@ class PyJammer:
         'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
         'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
     }
-
-    PATTERNS = {
-        'standard': 0,
-        'swing': 1,
-        'disco': 2
-    }
     
     INSTRUMENTS = {
         'piano': 1,
@@ -81,7 +75,7 @@ class PyJammer:
         'bell':     ["O", "O", "O", "O"],
         'swing':    ["KH", "H", "SH", "H"], # Logic can be adjusted for swing feel
         'disco':    ["K", "SH", "K", "SH"],
-        'standard': ["KH", "BH", "SH", "BH"],
+        'standard': ["BH", "KH", "BH", "KH"],
         'none':     ["", "", "", ""]
     }
 
@@ -158,7 +152,7 @@ class PyJammer:
         # Use \r (carriage return) to keep the progression on a single line
         print(f"\rProgression: {' | '.join(display_prog)}", end="", flush=True)
 
-    def play_progression(self, progression, silence_drums=False, pattern="standard", instrument='piano', arpeggio=False, bass_line='none'):
+    def play_progression(self, progression, silence_drums=False, pattern="standard", instrument='piano', arpeggio=False, bass_line='none', repetitions=1):
         self.set_instrument(instrument, channel=1)
         beat_len = 60 / self.bpm
         CHORD_CH, BASS_CH, DRUM_CH = 1, 2, 9
@@ -166,66 +160,67 @@ class PyJammer:
         progression_list = progression.split('|')
         
         try:
-            # Enumerate allows us to know the index of the current chord
-            for i, chord_name in enumerate(progression_list):
+            for rep in range(repetitions):
+                # Enumerate allows us to know the index of the current chord
+                for i, chord_name in enumerate(progression_list):
 
-                self.print_progression_status(progression_list, i)
-                
-                parsed = self._parse_chord(chord_name)
-                is_rest = parsed is None
-                chord_notes = []
-
-                if not is_rest:
-                    root, intervals, bass, is_minor, is_ending = parsed
-                    chord_notes = [(5 * 12 + self.transpose + root) + i_val for i_val in intervals]
-                    if len(chord_notes) < 4:
-                        chord_notes.append(chord_notes[0] + 12)
+                    self.print_progression_status(progression_list, i)
                     
-                    actual_bass_root = bass if bass is not None else root
-                    bass_midi_root = (3 * 12 + self.transpose + actual_bass_root)
+                    parsed = self._parse_chord(chord_name)
+                    is_rest = parsed is None
+                    chord_notes = []
 
-                for beat in range(4):
-                    # --- BASS LINE LOGIC ---
-                    if not is_rest and bass_line != 'none':
-                        root, intervals, bass, is_minor, is_ending = parsed
-                        if is_minor:
-                            note = self.BASS_MINOR[bass_line][beat]
-                        else:
-                            note = self.BASS_MAJOR[bass_line][beat]
-                            
-                        if note is not None:
-                            self.midi_out.note_on(bass_midi_root + note, self.Volume_Bass, BASS_CH)
-
-                        if beat==3 and is_ending:
-                                self.midi_out.note_on(self.DRUM_MAP['Y'], 90, DRUM_CH)
-
-                    # --- CHORD / ARPEGGIO LOGIC ---
                     if not is_rest:
-                        if arpeggio:
-                            note_to_play = chord_notes[beat % len(chord_notes)]
-                            self.midi_out.note_on(note_to_play, self.Volume_Inst, CHORD_CH)
-                        elif beat == 0:
-                            for n in chord_notes:
-                                self.midi_out.note_on(n, self.Volume_Inst, CHORD_CH)
+                        root, intervals, bass, is_minor, is_ending = parsed
+                        chord_notes = [(5 * 12 + self.transpose + root) + i_val for i_val in intervals]
+                        if len(chord_notes) < 4:
+                            chord_notes.append(chord_notes[0] + 12)
+                        
+                        actual_bass_root = bass if bass is not None else root
+                        bass_midi_root = (3 * 12 + self.transpose + actual_bass_root)
 
-                    # --- DRUM LOGIC ---
-                    if not (is_rest and silence_drums):
-                        self._play_pattern_beat(pattern, beat, beat_len, DRUM_CH)
-                    else:
-                        time.sleep(beat_len)
+                    for beat in range(4):
+                        # --- BASS LINE LOGIC ---
+                        if not is_rest and bass_line != 'none':
+                            root, intervals, bass, is_minor, is_ending = parsed
+                            if is_minor:
+                                note = self.BASS_MINOR[bass_line][beat]
+                            else:
+                                note = self.BASS_MAJOR[bass_line][beat]
+                                
+                            if note is not None:
+                                self.midi_out.note_on(bass_midi_root + note, self.Volume_Bass, BASS_CH)
 
-                    # --- CLEANUP ---
-                    if arpeggio and not is_rest:
-                        time.sleep(0.05) 
-                        self.midi_out.note_off(note_to_play, 0, CHORD_CH)
-                    
-                    if not is_rest and bass_line != 'none':
-                        self.midi_out.note_off(bass_midi_root, 0, BASS_CH)
+                            if beat==3 and is_ending:
+                                    self.midi_out.note_on(self.DRUM_MAP['Y'], 90, DRUM_CH)
 
-                if not arpeggio and not is_rest:
-                    for n in chord_notes:
-                        self.midi_out.note_off(n, 0, CHORD_CH)
-            
+                        # --- CHORD / ARPEGGIO LOGIC ---
+                        if not is_rest:
+                            if arpeggio:
+                                note_to_play = chord_notes[beat % len(chord_notes)]
+                                self.midi_out.note_on(note_to_play, self.Volume_Inst, CHORD_CH)
+                            elif beat == 0:
+                                for n in chord_notes:
+                                    self.midi_out.note_on(n, self.Volume_Inst, CHORD_CH)
+
+                        # --- DRUM LOGIC ---
+                        if not (is_rest and silence_drums):
+                            self._play_pattern_beat(pattern, beat, beat_len, DRUM_CH)
+                        else:
+                            time.sleep(beat_len)
+
+                        # --- CLEANUP ---
+                        if arpeggio and not is_rest:
+                            time.sleep(0.05) 
+                            self.midi_out.note_off(note_to_play, 0, CHORD_CH)
+                        
+                        if not is_rest and bass_line != 'none':
+                            self.midi_out.note_off(bass_midi_root, 0, BASS_CH)
+
+                    if not arpeggio and not is_rest:
+                        for n in chord_notes:
+                            self.midi_out.note_off(n, 0, CHORD_CH)
+                
             self.print_progression_status([], 0)
 
         except KeyboardInterrupt:

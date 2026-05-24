@@ -1,10 +1,10 @@
-import PyJammer as bb
+import PyJammer as pj
 
 intro = "_"
 progression = "Am7|Am7|Am7|Am7|Dm7|Dm7|Am7|Am7|Em7|Dm7|Am7|E7."
 ending = "_|Am7"
 
-jammer = bb.PyJammer()
+jammer = pj.PyJammer()
 jammer.set_bpm(115)
 
 jammer.play_progression(intro, pattern="", instrument='piano', bass_line='none', arpeggio=True, silence_drums=False)
