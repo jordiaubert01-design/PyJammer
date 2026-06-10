@@ -141,8 +141,15 @@ class PyJammer:
         
     def set_bpm(self, new_bpm):
         self.bpm = new_bpm
+        print(f"bpm = {self.bpm}")
         
-    def print_progression_status(self, progression_list, i):
+    def print_progression_status(self, progression_list, i, text):
+        # Si la lista está vacía, borramos la línea por completo
+        if not progression_list:
+            # \r vuelve al inicio y \033[K borra todo hasta el final de la línea
+            print("\r\033[K", end="", flush=True)
+            return
+
         # Build the display string highlighting the current index
         display_prog = []
         for j, name in enumerate(progression_list):
@@ -153,9 +160,9 @@ class PyJammer:
                 display_prog.append(name)
         
         # Use \r (carriage return) to keep the progression on a single line
-        print(f"\rProgression: {' | '.join(display_prog)}", end="", flush=True)
-
-    def play_progression(self, progression, silence_drums=False, pattern="standard", instrument='piano', arpeggio=False, bass_line='none', repetitions=1):
+        print(f"\rProgression: {' | '.join(display_prog)}        {text}", end="", flush=True)
+        
+    def play_progression(self, progression, silence_drums=False, pattern="standard", instrument='piano', arpeggio=False, bass_line='none', repetitions=1, text=""):
         self.set_instrument(instrument, channel=1)
         beat_len = 60 / self.bpm
         CHORD_CH, BASS_CH, DRUM_CH = 1, 2, 9
@@ -166,7 +173,7 @@ class PyJammer:
             for rep in range(repetitions):
                 for i, segment_name in enumerate(progression_list):
 
-                    self.print_progression_status(progression_list, i)
+                    self.print_progression_status(progression_list, i, text)
                     
                     # Split the segment by commas to see if there are sub-chords
                     # e.g., "C" -> ["C"] | "C,G" -> ["C", "G"]
@@ -247,7 +254,7 @@ class PyJammer:
                         for n in active_chord_notes:
                             self.midi_out.note_off(n, 0, CHORD_CH)
                 
-            self.print_progression_status([], 0)
+            self.print_progression_status([], 0, "")
 
         except KeyboardInterrupt:
             print("\nSession ended.")
@@ -283,8 +290,8 @@ if __name__ == "__main__":
     
     #play progression with each instrument
     prog = "Cmaj7|Am7|Fmaj7|G7."
-    for i in range(1):
-        jammer.play_progression(prog, pattern='swing', instrument='piano', bass_line='blues', arpeggio=False)
+    for i in range(10):
+        jammer.play_progression(prog, pattern='swing', instrument='piano', bass_line='blues', arpeggio=False, text="progression1")
      
     jammer.close()
 
