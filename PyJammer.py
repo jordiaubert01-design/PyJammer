@@ -47,7 +47,7 @@ class PyJammer:
         'clap':     ["C", "C", "C", "C"],
         'bell':     ["O", "O", "O", "O"],
         'snare':    ["S", "S", "S", "S"],
-        'swing':    ["KH", "H", "SH", "H"], # Logic can be adjusted for swing feel
+        'swing':    ["KH", "H", "SH", "H"], 
         'disco':    ["K", "SH", "K", "SH"],
         'standard': ["KH", "SH", "KH", "SH"],
         'none':     ["", "", "", ""]
@@ -183,6 +183,7 @@ class PyJammer:
                     # Keep track of active notes to turn them off when chords change
                     active_chord_notes = []
                     last_chord_name = None
+                    current_note = 0
 
                     for beat in range(4):
                         # Determine which chord belongs to the current beat
@@ -225,7 +226,10 @@ class PyJammer:
                                 note = self.BASS_MAJOR[bass_line][beat]
                                 
                             if note is not None:
-                                self.midi_out.note_on(bass_midi_root + note, self.Volume_Bass, BASS_CH)
+                                #stop last bass note played
+                                self.midi_out.note_off(current_note, 0, BASS_CH)
+                                current_note = bass_midi_root + note
+                                self.midi_out.note_on(current_note, self.Volume_Bass, BASS_CH)
 
                             if beat == 3 and is_ending:
                                 self.midi_out.note_on(self.DRUM_MAP['Y'], self.Volume_Drums, DRUM_CH)

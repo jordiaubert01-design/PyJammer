@@ -12,7 +12,7 @@ ending="_"
 jammer.set_bpm(140)
 
 jammer.play_progression(intro, pattern="swing", bass_line='blues')
-for i in range (3):
+for i in range (6):
     jammer.play_progression(comu, pattern="swing", bass_line='blues')
     jammer.play_progression(estrofa1, pattern="swing", bass_line='blues')
     jammer.play_progression(comu, pattern="swing", bass_line='blues')
