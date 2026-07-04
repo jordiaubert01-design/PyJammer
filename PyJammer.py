@@ -39,38 +39,40 @@ class PyJammer:
         'O': 56, # Cow bell
         'Y': 49  # Cymbal
     }
-
-    # The Pattern Table: Each list contains 4 beats, each beat contains instructions
+    
+    # The Pattern Table: Each list contains 8 beats, each beat contains instructions
     DRUM_PATTERNS = {
-        'hihat':    ["H", "H", "H", "H"],
-        'bass':     ["B", "B", "B", "B"],
-        'clap':     ["C", "C", "C", "C"],
-        'bell':     ["O", "O", "O", "O"],
-        'snare':    ["S", "S", "S", "S"],
-        'swing':    ["KH", "H", "SH", "H"], 
-        'disco':    ["K", "SH", "K", "SH"],
-        'standard': ["KH", "SH", "KH", "SH"],
-        'none':     ["", "", "", ""]
+        'standard': ["KH",  "",   "SH",  "",   "KH",  "",   "SH",  ""],
+        'hihat':    ["H",   "",   "H",   "",   "H",   "",   "H",   ""],
+        'bass':     ["B",   "",   "B",   "",   "B",   "",   "B",   ""],
+        'clap':     ["",    "",   "C",   "",   "",    "",   "C",   ""],
+        'bell':     ["O",   "",   "O",   "",   "O",   "",   "O",   ""],
+        'snare':    ["",    "",   "S",   "",   "",    "",   "S",   ""],
+        'swing':    ["KH",  "",   "",    "H",  "SH",  "",   "",    "H"], # Ajustado al "shuffle" de corcheas
+        'disco':    ["K",   "",   "SH",  "",   "K",   "",   "SH",  ""],
+        'rumba':    ["",    "C",  "C",   "",   "C",   "",   "C",   "C"],
+        'none':     ["",    "",   "",    "",   "",    "",   "",    ""]
     }
 
-    #different bass styles, where each defines a note for each beat
+    # Estilos de bajo definidos paso a paso para las 8 corcheas
     BASS_MAJOR = {
-        'simple' : [0,0,0,0],
-        'half' : [0,None,0,None],
-        'blues' : [0,3,5,7],
-        'pop' : [0,0,0,7],
-        'ballad' : [0,None,0,7],
-        'country' : [0, None, 7, None],
-        'none' : []
+        'simple' : [0, None, 0, None, 0, None, 0, None],
+        'double' : [0, 0 , 0, 0, 0, 0, 0, 0],
+        'half'   : [0, None, None, 0, 0, None, None, None],
+        'blues'  : [0, None, 3, None, 5, None, 7, None], # Las notas caen en negras
+        'pop'    : [0, 0, 0, 0, 7, 7, 7, 7],             # Pulso continuo en corcheas
+        'ballad' : [0, None, None, None, 0, None, 7, None],
+        'country': [0, None, None, None, 7, None, None, None],
+        'none'   : []
     }
     BASS_MINOR = {
-        'simple' : [0,0,0,0],
-        'half' : [0,None,0,None],
-        'blues' : [0,3,5,7],
-        'pop' : [0,0,0,7],
-        'ballad' : [0,None,0,7],
-        'country' : [0, None, 7, None],
-        'none' : []
+        'simple' : [0, None, 0, None, 0, None, 0, None],
+        'half'   : [0, None, None, None, 0, None, None, None],
+        'blues'  : [0, None, 3, None, 5, None, 7, None],
+        'pop'    : [0, 0, 0, 0, 7, 7, 7, 7],
+        'ballad' : [0, None, None, None, 0, None, 7, None],
+        'country': [0, None, None, None, 7, None, None, None],
+        'none'   : []
     }
     
     INTERVAL_MINOR = [0, 3, 7]
@@ -95,9 +97,9 @@ class PyJammer:
         self.midi_out = pygame.midi.Output(port)
         self.set_instrument('piano', channel=1)
         self.set_instrument('bass', channel=2) # Initialize bass channel
-        self.Volume_Bass = 70
-        self.Volume_Inst = 50
-        self.Volume_Drums = 90
+        self.Volume_Bass = 80
+        self.Volume_Inst = 60
+        self.Volume_Drums = 100
         
     def set_instrument(self, name, channel=1):
         if name in self.INSTRUMENTS:
@@ -163,6 +165,109 @@ class PyJammer:
         print(f"\rProgression: {' | '.join(display_prog)}        {text}", end="", flush=True)
         
     def play_progression(self, progression, silence_drums=False, pattern="standard", instrument='piano', arpeggio=False, bass_line='none', repetitions=1, text=""):
+        self.set_instrument(instrument, channel=1)
+        
+        # Un beat (negra) es 60/bpm. Una corchea (step) dura la mitad.
+        beat_len = 60 / self.bpm
+        step_len = beat_len / 2  
+        
+        CHORD_CH, BASS_CH, DRUM_CH = 1, 2, 9
+        progression_list = progression.split('|')
+        
+        try:
+            for rep in range(repetitions):
+                for i, segment_name in enumerate(progression_list):
+
+                    self.print_progression_status(progression_list, i, text)
+                    
+                    # Separamos el segmento por comas (ej: "C,G" o "C,F,G,Am")
+                    sub_chords = segment_name.split(',')
+                    num_sub_chords = len(sub_chords)
+                    
+                    active_chord_notes = []
+                    last_chord_name = None
+                    current_note = 0
+
+                    # EL CAMBIO PRINCIPAL: Ahora iteramos 8 corcheas por compás
+                    for step in range(8):
+                        # Mapeo matemático para distribuir los acordes en los 8 pasos
+                        # Si hay 2 acordes ("C,G"), pasos 0-3 serán index 0 ("C") y pasos 4-7 serán index 1 ("G")
+                        chord_idx = int(step / (8 / num_sub_chords))
+                        current_chord_name = sub_chords[chord_idx]
+
+                        # --- DETECTAR CAMBIO DE ACORDE EN EL COMPÁS ---
+                        if current_chord_name != last_chord_name:
+                            for n in active_chord_notes:
+                                self.midi_out.note_off(n, 0, CHORD_CH)
+                            active_chord_notes = []
+
+                            parsed = self._parse_chord(current_chord_name)
+                            is_rest = parsed is None
+
+                            if not is_rest:
+                                root, intervals, bass, is_minor, is_ending = parsed
+                                active_chord_notes = [(5 * 12 + self.transpose + root) + i_val for i_val in intervals]
+                                if len(active_chord_notes) < 4:
+                                    active_chord_notes.append(active_chord_notes[0] + 12)
+                                
+                                actual_bass_root = bass if bass is not None else root
+                                bass_midi_root = (3 * 12 + self.transpose + actual_bass_root)
+
+                                # Lanzar el acorde en bloque solo si NO es arpegio
+                                if not arpeggio:
+                                    for n in active_chord_notes:
+                                        self.midi_out.note_on(n, self.Volume_Inst, CHORD_CH)
+
+                            last_chord_name = current_chord_name
+
+                        # --- LÓGICA DE LÍNEA DE BAJO ---
+                        if not is_rest and bass_line != 'none':
+                            if is_minor:
+                                note = self.BASS_MINOR[bass_line][step]
+                            else:
+                                note = self.BASS_MAJOR[bass_line][step]
+                                
+                            if note is not None:
+                                self.midi_out.note_off(current_note, 0, BASS_CH)
+                                current_note = bass_midi_root + note
+                                self.midi_out.note_on(current_note, self.Volume_Bass, BASS_CH)
+
+                            # Platillo final en la última corchea del compás adaptado
+                            if step == 7 and is_ending:
+                                self.midi_out.note_on(self.DRUM_MAP['Y'], self.Volume_Drums, DRUM_CH)
+
+                        # --- LÓGICA DE ACORDE / ARPEGIO ---
+                        # Si es arpegio, avanza una nota del acorde en cada una de las 8 corcheas
+                        if not is_rest and arpeggio:
+                            note_to_play = active_chord_notes[step % len(active_chord_notes)]
+                            self.midi_out.note_on(note_to_play, self.Volume_Inst, CHORD_CH)
+
+                        # --- LÓGICA DE BATERÍA ---
+                        # Enviamos step_len en lugar de beat_len para mantener la velocidad adecuada
+                        if not (is_rest and silence_drums):
+                            self._play_pattern_beat(pattern, step, step_len, DRUM_CH)
+                        else:
+                            time.sleep(step_len)
+
+                        # --- LIMPIEZA AL FINAL DE CADA CORCHEA ---
+                        if arpeggio and not is_rest:
+                            time.sleep(0.02) # Reducido proporcionalmente para corcheas rápidas
+                            self.midi_out.note_off(note_to_play, 0, CHORD_CH)
+                        
+                        if not is_rest and bass_line != 'none':
+                            self.midi_out.note_off(bass_midi_root, 0, BASS_CH)
+
+                    # --- LIMPIEZA AL FINAL DEL COMPÁS ---
+                    if not arpeggio:
+                        for n in active_chord_notes:
+                            self.midi_out.note_off(n, 0, CHORD_CH)
+                
+            self.print_progression_status([], 0, "")
+
+        except KeyboardInterrupt:
+            print("\nSession ended.")
+
+    def play_progression4(self, progression, silence_drums=False, pattern="standard", instrument='piano', arpeggio=False, bass_line='none', repetitions=1, text=""):
         self.set_instrument(instrument, channel=1)
         beat_len = 60 / self.bpm
         CHORD_CH, BASS_CH, DRUM_CH = 1, 2, 9
@@ -290,12 +395,12 @@ if __name__ == "__main__":
     jammer.set_bpm(105)
     jammer.set_transpose(0)
     #play intro beat
-    jammer.play_progression("_", pattern="hihat", bass_line='none', arpeggio=False, silence_drums=False)
+    jammer.play_progression("_", pattern="rumba", bass_line='none', arpeggio=False, silence_drums=False, repetitions=10)
     
     #play progression with each instrument
     prog = "Cmaj7|Am7|Fmaj7|G7."
     for i in range(10):
-        jammer.play_progression(prog, pattern='swing', instrument='piano', bass_line='blues', arpeggio=False, text="progression1")
+        jammer.play_progression(prog, pattern='rumba', instrument='piano', bass_line='blues', arpeggio=False, text="progression1")
      
     jammer.close()
 

@@ -19,6 +19,6 @@ for i in range(4):
     jammer.play_progression(p3, bass_line="country", repetitions = 1)
     jammer.play_progression(p1, bass_line="country", repetitions = 1)
 
-jammer.play_progression(p1, bass_line="country", repetitions = 4)
+jammer.play_progression(p1, bass_line="country", repetitions = 1)
 
 jammer.close()
