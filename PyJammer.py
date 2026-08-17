@@ -43,6 +43,7 @@ class PyJammer:
     # The Pattern Table: Each list contains 8 beats, each beat contains instructions
     DRUM_PATTERNS = {
         'standard': ["KH",  "",   "SH",  "",   "KH",  "",   "SH",  ""],
+        'rock':     ["KH",  "H",  "SH",  "H",   "H",  "KH",  "SH",  "H"],
         'hihat':    ["H",   "",   "H",   "",   "H",   "",   "H",   ""],
         'bass':     ["B",   "",   "B",   "",   "B",   "",   "B",   ""],
         'clap':     ["",    "",   "C",   "",   "",    "",   "C",   ""],
@@ -50,7 +51,8 @@ class PyJammer:
         'snare':    ["",    "",   "S",   "",   "",    "",   "S",   ""],
         'swing':    ["KH",  "",   "",    "H",  "SH",  "",   "",    "H"], # Ajustado al "shuffle" de corcheas
         'disco':    ["K",   "",   "SH",  "",   "K",   "",   "SH",  ""],
-        'rumba':    ["",    "C",  "C",   "",   "C",   "",   "C",   "C"],
+        'rumba':    ["B",   "",   "C",   "C",  "",    "",   "C",   ""],
+        'waltz':    ["K",   "",   "SH",  "",   "SH",  "",   "K",   "", "SH",  "",   "SH"],
         'none':     ["",    "",   "",    "",   "",    "",   "",    ""]
     }
 
@@ -58,17 +60,21 @@ class PyJammer:
     BASS_MAJOR = {
         'simple' : [0, None, 0, None, 0, None, 0, None],
         'double' : [0, 0 , 0, 0, 0, 0, 0, 0],
-        'half'   : [0, None, None, 0, 0, None, None, None],
-        'blues'  : [0, None, 3, None, 5, None, 7, None], # Las notas caen en negras
-        'pop'    : [0, 0, 0, 0, 7, 7, 7, 7],             # Pulso continuo en corcheas
+        'half'   : [0, None, None, None, 0, 0, None, None],
+        'blues'  : [0, None, 4, None, 5, None, 7, None], 
+        'blues2' : [0, None, 4, None, 7, None, 9, None], 
+        'pop'    : [0, None, 0, None, 7, None, 0, None], 
         'ballad' : [0, None, None, None, 0, None, 7, None],
         'country': [0, None, None, None, 7, None, None, None],
         'none'   : []
     }
+    
     BASS_MINOR = {
         'simple' : [0, None, 0, None, 0, None, 0, None],
+        'double' : [0, 0 , 0, 0, 0, 0, 0, 0],
         'half'   : [0, None, None, None, 0, None, None, None],
         'blues'  : [0, None, 3, None, 5, None, 7, None],
+        'blues2' : [0, None, 3, None, 7, None, 9, None],
         'pop'    : [0, 0, 0, 0, 7, 7, 7, 7],
         'ballad' : [0, None, None, None, 0, None, 7, None],
         'country': [0, None, None, None, 7, None, None, None],
@@ -188,8 +194,11 @@ class PyJammer:
                     last_chord_name = None
                     current_note = 0
 
-                    # EL CAMBIO PRINCIPAL: Ahora iteramos 8 corcheas por compás
-                    for step in range(8):
+                    # define number of notes per beat according to the selected pattern. For standard patterns, we use 8 steps (corcheas)
+                    #nr_notes = len(self.DRUM_PATTERNS.get(pattern, self.DRUM_PATTERNS['standard']))
+                    nr_notes = 8
+
+                    for step in range(nr_notes):
                         # Mapeo matemático para distribuir los acordes en los 8 pasos
                         # Si hay 2 acordes ("C,G"), pasos 0-3 serán index 0 ("C") y pasos 4-7 serán index 1 ("G")
                         chord_idx = int(step / (8 / num_sub_chords))
@@ -395,12 +404,12 @@ if __name__ == "__main__":
     jammer.set_bpm(105)
     jammer.set_transpose(0)
     #play intro beat
-    jammer.play_progression("_", pattern="rumba", bass_line='none', arpeggio=False, silence_drums=False, repetitions=10)
+    jammer.play_progression("_", pattern="hihat", bass_line='none', arpeggio=False, silence_drums=False, repetitions=1)
     
     #play progression with each instrument
     prog = "Cmaj7|Am7|Fmaj7|G7."
     for i in range(10):
-        jammer.play_progression(prog, pattern='rumba', instrument='piano', bass_line='blues', arpeggio=False, text="progression1")
+        jammer.play_progression(prog, pattern='swing', instrument='piano', bass_line='blues', arpeggio=False, text="progression1")
      
     jammer.close()
 
