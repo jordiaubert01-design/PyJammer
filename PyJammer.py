@@ -9,6 +9,7 @@
 import pygame.midi
 import time
 import re
+from visualizer import PyJammerVisualizer
 
 class PyJammer:
     NOTE_MAP = {
@@ -44,6 +45,7 @@ class PyJammer:
     DRUM_PATTERNS = {
         'standard': ["KH",  "",   "SH",  "",   "KH",  "",   "SH",  ""],
         'rock':     ["KH",  "H",  "SH",  "H",   "H",  "KH",  "SH",  "H"],
+        'ballad':   ["BH", "H", "H", "SH", "H", "BH", "BH", "H", "H", "SH", "H", "H"], # 12/8 ballad
         'hihat':    ["H",   "",   "H",   "",   "H",   "",   "H",   ""],
         'bass':     ["B",   "",   "B",   "",   "B",   "",   "B",   ""],
         'clap':     ["",    "",   "C",   "",   "",    "",   "C",   ""],
@@ -68,6 +70,7 @@ class PyJammer:
         'ballad' : [0, None, None, None, 0, None, 7, None],
         'country': [0, None, None, None, 7, None, None, None],
         # 3/4 Waltz Bass (6 steps)
+        'blues12': [-12, None, None, None, None, -12, -12, None, None, None, None, None],
         'waltz':   [0, None, None, None, 7, None],
         'none'   : []
     }
@@ -82,6 +85,7 @@ class PyJammer:
         'ballad' : [0, None, None, None, 0, None, 7, None],
         'country': [0, None, None, None, 7, None, None, None],
         # 3/4 Waltz Bass (6 steps)
+        'blues12': [-12, None, None, None, None, -12, -12, None, None, None, None, None],
         'waltz':   [0, None, None, None, 7, None],
         'none'   : []
     }
@@ -112,6 +116,17 @@ class PyJammer:
         self.Volume_Inst = 60
         self.Volume_Drums = 100
         
+        # Inicialització del mòdul visualitzador
+        self.visualizer = PyJammerVisualizer()
+
+    def start_visualizer(self):
+        """Funció per activar les llums"""
+        self.visualizer.start()
+
+    def stop_visualizer(self):
+        """Funció per desactivar les llums"""
+        self.visualizer.stop()
+
     def set_instrument(self, name, channel=1):
         if name in self.INSTRUMENTS:
             program_number = self.INSTRUMENTS[name]
@@ -286,6 +301,10 @@ class PyJammer:
         """Plays drums based on the DRUM_PATTERNS table."""
         pattern = self.DRUM_PATTERNS.get(pattern_name, self.DRUM_PATTERNS['standard'])
         instructions = pattern[beat]
+
+        # ENVIAR ESDEVENIMENT AL VISUALITZADOR
+        if instructions:
+            self.visualizer.trigger_drum(instructions)
 
         # Trigger notes based on characters
         for char in instructions:
