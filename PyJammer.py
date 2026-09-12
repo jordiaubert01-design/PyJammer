@@ -115,7 +115,7 @@ class PyJammer:
         self.Volume_Bass = 80
         self.Volume_Inst = 60
         self.Volume_Drums = 100
-        
+
         # Inicialització del mòdul visualitzador
         self.visualizer = PyJammerVisualizer()
 
@@ -180,13 +180,19 @@ class PyJammer:
 
         # Build the display string highlighting the current index
         display_prog = []
+        current_chord = ""
         for j, name in enumerate(progression_list):
             if i == j:
                 # Highlight current chord: Bold Red
                 display_prog.append(f"\033[1;31m{name}\033[0m")
+                current_chord = name
             else:
                 display_prog.append(name)
-        
+
+        # Enviar el text de l'acord/progressió al visualitzador
+        prompter_text = f"[{current_chord}]  {' | '.join(progression_list)}"
+        self.visualizer.trigger_text(text)
+
         # Use \r (carriage return) to keep the progression on a single line
         print(f"\rProgression: {' | '.join(display_prog)}        {text}", end="", flush=True)
 
@@ -330,6 +336,8 @@ if __name__ == "__main__":
     #play intro beat
     #jammer.play_progression("_", pattern="hihat", bass_line='none', arpeggio=False, silence_drums=False, repetitions=1)
     
+    jammer.start_visualizer()
+
     #play progression with each instrument
     prog = "Cmaj7|Am7|Fmaj7|G7."
     for i in range(5):

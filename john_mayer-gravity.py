@@ -1,24 +1,53 @@
 import PyJammer as pj
 
-jammer = pj.PyJammer()
+gravity_john_mayer = [
+    # Intro
+    ("G|C|G|C", "(Intro)"),
+    
+    # Verse 1
+    ("G|C", "Gravity is working against me"),
+    ("G|C", "And gravity wants to bring me down"),
+    
+    # Chorus 1
+    ("Am", "Oh, I'll never know what makes this man"),
+    ("D7",  "with all the love that his heart can stand"),
+    ("Gm,Ebmaj7|D7,.", "dream of ways to throw it all away"),
+    
+    # Verse 2
+    ("G|C", "Oooh, Gravity is working against me"),
+    ("G|C", "And gravity wants to bring me down"),
+    
+    # Verse 3
+    ("Am", "Oooh, twice as much ain't twice as good"),
+    ("D7", "And can't sustain like one half could"),
+    ("Gm,Ebmaj7|D7,.", "It's wanting more that's gonna send me to my knees"),
+    
+    # Solo / Interlude
+    ("G|C|G|C", "(Solo)"),
+    
+    # Chorus 2
+    ("Am", "Oooh, twice as much ain't twice as good"),
+    ("D7",  "And can't sustain like one half could"),
+    ("Gm,Ebmaj7|D7,.", "It's wanting more that's gonna send me to my knees"),
 
-intro= "G|C"
-pat1 = "G|C|G|C|Am|D7"
-pat2 = "Gm,Ebmaj7|D7,."
+    # Outro
+    ("G|C", "Oh, gravity, stay the hell away from me"),
+    ("G|C", "Oh, gravity has taken all I got"),
+    ("G|C", "Now how can that be all?"),
+    ("G|C", "Just keep me where the light is"),
+    ("G|C", "(ending)")
+]
+
+jammer = pj.PyJammer()
 
 ending="_"
 
-jammer.set_bpm(62)
+jammer.set_bpm(92)
 jammer.Volume_Inst = 20
-#jammer.Volume_Bass = 100
 
 jammer.start_visualizer()
 
-jammer.play_progression(".", pattern="ballad", instrument = "", bass_line='')
-jammer.play_progression(intro, pattern="ballad", instrument = "organ", bass_line='blues12')
-
-for i in range(4):
-    jammer.play_progression(pat1, pattern="ballad", instrument = "organ", bass_line='blues12')
-    jammer.play_progression(pat2, pattern="ballad", instrument = "organ", bass_line='blues12')
+for chords, lyrics in gravity_john_mayer:
+    jammer.play_progression(chords, pattern="ballad", instrument = "organ", bass_line='blues12', text=lyrics)
 
 jammer.close()
