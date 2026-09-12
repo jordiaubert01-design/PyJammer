@@ -42,7 +42,7 @@ jammer = pj.PyJammer()
 
 ending="_"
 
-jammer.set_bpm(92)
+jammer.set_bpm(62)
 jammer.Volume_Inst = 20
 
 jammer.start_visualizer()
