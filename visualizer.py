@@ -156,34 +156,36 @@ class PyJammerVisualizer:
                 if p['y'] > self.height or p['radius'] <= 1:
                     self.particles.remove(p)
 
-            # Dibuixar el Prompter d'Acords a la part inferior
+            # --- DIBUIXAR EL PROMPTER AMB TRANSICIÓ ACCENTUADA A NEGRE ---
             for line in self.prompter_lines:
                 # Transició d'animació suau cap a target_y
                 line['y'] += (line['target_y'] - line['y']) * 0.2
 
-                # 1. Calculem el factor d'intensitat (1.0 = Blanc pur a baix, 0.0 = Gris molt fosc a dalt)
+                # 1. Mapeig base de la posició Y (1.0 a baix, 0.0 a dalt)
                 y_ratio = line['y'] / self.height
-                # Mapegem el rang Y a un factor entre 0.0 i 1.0
-                factor = max(0.0, min(1.0, (y_ratio - 0.15) * 1.5))
+                linear_factor = max(0.0, min(1.0, (y_ratio - 0.25) * 1.6))
 
-                # 2. Interpolem el color de text: des de gris fosc (60) fins a blanc pur (255)
-                text_val = int(60 + (255 - 60) * factor)
-                text_color = (text_val, text_val, int(text_val * 0.98)) # Lleuger to càlid
+                # 2. ACCENTUACIÓ EXPONENCIAL: Elevador al quadrat/cub per enfosquir fortament
+                # Això fa que el color caigui a negre molt més ràpidament en pujar
+                dark_factor = linear_factor ** 2.8
 
-                # 3. Interpolem l'ombra: des de negre invisible a dalt fins a negre definit a baix
-                shadow_val = int(40 * factor)
+                # 3. Interpolem des de negre gairebé pur (15) fins a blanc intens (255)
+                text_val = int(15 + (255 - 15) * dark_factor)
+                text_color = (text_val, text_val, text_val)
+
+                # 4. Ombra que desapareix immediatament en perdre brillantor
+                shadow_val = int(50 * dark_factor)
                 shadow_color = (shadow_val, shadow_val, shadow_val)
 
-                # 4. Renderitzem directament amb els colors calculats (Sense cap Alpha Surface!)
+                # Renderització directa
                 raw_shadow = font.render(line['text'], True, shadow_color)
                 raw_text = font.render(line['text'], True, text_color)
 
                 rect = raw_text.get_rect(center=(self.width // 2, int(line['y'])))
                 
-                # Dibuixem ombra i text principal
                 screen.blit(raw_shadow, (rect.x + 2, rect.y + 2))
                 screen.blit(raw_text, rect)
-                
+
             pygame.display.flip()
             clock.tick(60)
 

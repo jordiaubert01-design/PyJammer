@@ -204,7 +204,8 @@ class PyJammer:
         step_len = beat_len / 2  
         
         CHORD_CH, BASS_CH, DRUM_CH = 1, 2, 9
-        progression_list = progression.split('|')
+        progression = progression.replace(" ", "")  # clean all spaces in chord progression, added just for readibility
+        progression_list = progression.split('|')   # split chords by '|' char
         
         try:
             for rep in range(repetitions):
