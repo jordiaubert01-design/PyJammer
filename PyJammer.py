@@ -334,15 +334,13 @@ if __name__ == "__main__":
     
     jammer.set_bpm(105)
     jammer.set_transpose(0)
-    #play intro beat
-    #jammer.play_progression("_", pattern="hihat", bass_line='none', arpeggio=False, silence_drums=False, repetitions=1)
-    
+
     jammer.start_visualizer()
 
     #play progression with each instrument
     prog = "Cmaj7|Am7|Fmaj7|G7."
     for i in range(5):
-        jammer.play_progression(prog, pattern='standard', instrument='piano', bass_line='blues', arpeggio=False)
+        jammer.play_progression(prog, pattern='standard', instrument='piano', bass_line='blues', arpeggio=False, text="lyrics...")
      
     jammer.close()
 

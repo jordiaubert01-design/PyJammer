@@ -104,7 +104,7 @@ class PyJammerVisualizer:
             self.current_bg_color[i] += (self.target_bg_color[i] - self.current_bg_color[i]) * speed
 
     def _run(self):
-        pygame.init()
+        #pygame.init()
         pygame.font.init()
         screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("PyJammer Light Cascade & Prompter - Press ESC to exit")
@@ -189,4 +189,4 @@ class PyJammerVisualizer:
             pygame.display.flip()
             clock.tick(60)
 
-        pygame.quit()
+        #pygame.quit()
